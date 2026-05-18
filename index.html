@@ -3,87 +3,129 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ronin Login - WalletConnect + Injected</title>
+  <title>Ronin Login - Reown AppKit</title>
+  
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
-  <!-- Reown AppKit CDN (for quick demo) -->
   <script src="https://cdn.jsdelivr.net/npm/@reown/appkit@1/dist/appkit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@reown/appkit-adapter-ethers@1/dist/adapter.min.js"></script>
 </head>
 <body>
-  <button id="login-injected">Login with Ronin Extension</button>
-  <button id="login-wc">Login with WalletConnect</button>
+  <button id="login-wc">Connect Wallet (WalletConnect + Ronin)</button>
+  <button id="login-injected">Ronin Extension Only</button>
   <p id="status"></p>
 
   <script>
     const status = document.getElementById("status");
-    const projectId = "YOUR_REOWN_PROJECT_ID"; // Get from https://cloud.reown.com
+    const projectId = "YOUR_REOWN_PROJECT_ID";   // ← Get from https://cloud.reown.com
 
-    // Initialize Reown AppKit
-    const networks = [{
-      chainId: 2020,                    // Ronin Mainnet
+    // Ronin Mainnet config
+    const roninNetwork = {
+      chainId: 2020,
       name: "Ronin",
       currency: "RON",
       rpcUrl: "https://api.roninchain.com/rpc",
-      explorerUrl: "https://app.roninchain.com"
-    }];
+      explorerUrl: "https://app.roninchain.com",
+      // Optional: add testnet too if needed
+    };
 
-    const appKit = new window.AppKit({
-      projectId,
-      networks,
-      defaultNetwork: networks[0],
-      themeMode: "dark"
-    });
+    // Metadata (required)
+    const metadata = {
+      name: "Rofriends",
+      description: "Login with Ronin",
+      url: window.location.origin,
+      icons: ["https://yourapp.com/icon.png"]   // Change this
+    };
 
-    // === WalletConnect Login ===
-    document.getElementById("login-wc").onclick = async () => {
-      try {
-        status.innerText = "Opening WalletConnect...";
-        const { address } = await appKit.open(); // Opens modal
+    // Initialize AppKit
+    let modal;
 
-        if (!address) {
-          status.innerText = "Connection cancelled";
-          return;
+    async function initAppKit() {
+      const adapter = new window.EthersAdapter();
+
+      modal = window.createAppKit({
+        adapters: [adapter],
+        networks: [roninNetwork],
+        defaultNetwork: roninNetwork,
+        projectId,
+        metadata,
+        themeMode: "dark",
+        features: {
+          analytics: true,
         }
+      });
 
-        await handleLogin(address);
+      console.log("✅ Reown AppKit initialized");
+    }
+
+    // Shared login handler
+    async function handleLogin(address) {
+      if (!address) return;
+
+      status.innerText = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
+
+      try {
+        // 1. Get nonce
+        const nonceRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "get_nonce", address })
+        });
+        const { nonce } = await nonceRes.json();
+
+        const message = `Login to Rofriends with nonce: ${nonce}`;
+
+        // 2. Sign message
+        const provider = modal.getProvider();
+        const signer = await provider.getSigner();
+        const signature = await signer.signMessage(message);
+
+        // 3. Verify
+        const verifyRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "verify", address, signature, message })
+        });
+
+        const result = await verifyRes.json();
+
+        status.innerText = result.success 
+          ? `✅ Logged in successfully!` 
+          : `❌ Verification failed`;
       } catch (err) {
         console.error(err);
-        status.innerText = "Connection failed";
+        status.innerText = "Error during login";
+      }
+    }
+
+    // WalletConnect / All Wallets Button
+    document.getElementById("login-wc").onclick = async () => {
+      try {
+        status.innerText = "Opening connection modal...";
+        await initAppKit(); // initialize on first click (or do it on load)
+
+        modal.open(); // Opens the beautiful modal with QR + many wallets
+
+        // Listen for connection (you can also use modal.subscribe)
+        modal.subscribeState((state) => {
+          if (state.address) {
+            handleLogin(state.address);
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        status.innerText = "Failed to open modal";
       }
     };
 
-    // === Existing Injected Ronin Login (for reference) ===
+    // Injected Ronin Extension Only
     document.getElementById("login-injected").onclick = async () => {
-      // ... your previous ethers v6 injected code ...
+      // Reuse your previous working injected code here
+      if (!window.ronin?.provider) {
+        alert("Ronin Wallet extension not found");
+        return;
+      }
+      // ... paste your ethers v6 injected login logic ...
     };
-
-    // Shared login flow (nonce + signature)
-    async function handleLogin(address) {
-      status.innerText = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
-
-      // 1. Get nonce
-      const nonceRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "get_nonce", address })
-      });
-      const { nonce } = await nonceRes.json();
-
-      const message = `Login to Rofriends with nonce: ${nonce}`;
-
-      // 2. Sign (works with both injected and WalletConnect)
-      const signer = await appKit.getSigner(); // or use provider.getSigner() if using ethers directly
-      const signature = await signer.signMessage(message);
-
-      // 3. Verify on backend
-      const verifyRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "verify", address, signature, message })
-      });
-
-      const result = await verifyRes.json();
-      status.innerText = result.success ? `✅ Logged in!` : "❌ Verification failed";
-    }
   </script>
 </body>
 </html>
