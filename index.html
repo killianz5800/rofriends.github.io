@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ronin Login</title>
+  <title>Ronin Login - ethers v6</title>
+  <!-- ethers v6 via CDN (for quick testing) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
 </head>
 <body>
   <button id="login">Login with Ronin</button>
@@ -12,37 +14,27 @@
   <script>
     const status = document.getElementById("status");
 
-    // Helper to detect Ronin Wallet
-    function getRoninProvider() {
-      if (window.ronin?.provider) {
-        return window.ronin.provider;
-      }
-      // Fallback for some versions
-      if (window.roninWallet) {
-        return window.roninWallet;
-      }
-      return null;
-    }
-
     document.getElementById("login").onclick = async () => {
       try {
-        const provider = getRoninProvider();
-
-        if (!provider) {
-          alert("Ronin Wallet is not installed. Please install it from https://wallet.roninchain.com");
+        // Check if Ronin Wallet is installed
+        if (!window.ronin?.provider) {
+          alert("Ronin Wallet is not installed. Please install it.");
           window.open("https://wallet.roninchain.com", "_blank");
           return;
         }
 
-        // Request accounts
-        const accounts = await provider.request({
-          method: "eth_requestAccounts"
-        });
+        status.innerText = "Connecting to Ronin Wallet...";
 
+        // Create BrowserProvider with Ronin provider
+        const provider = new ethers.BrowserProvider(window.ronin.provider);
+
+        // Request accounts
+        const accounts = await provider.send("eth_requestAccounts", []);
         const address = accounts[0];
+
         status.innerText = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`;
 
-        // === Your existing backend nonce + sign flow ===
+        // 1. Get nonce from your backend
         const nonceRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,13 +48,13 @@
 
         const message = `Login to Rofriends with nonce: ${nonce}`;
 
-        // Sign message
-        const signature = await provider.request({
-          method: "personal_sign",
-          params: [message, address]
-        });
+        // 2. Sign message using ethers v6
+        const signer = await provider.getSigner();
+        const signature = await signer.signMessage(message);
 
-        // Verify on backend
+        status.innerText = "Signature created. Verifying...";
+
+        // 3. Send to backend for verification
         const verifyRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -77,14 +69,14 @@
         const result = await verifyRes.json();
 
         if (result.success) {
-          status.innerText = `✅ Logged in as ${address.slice(0, 6)}...${address.slice(-4)}`;
+          status.innerText = `✅ Successfully logged in as ${address.slice(0, 6)}...${address.slice(-4)}`;
         } else {
           status.innerText = "❌ Login failed";
         }
 
       } catch (err) {
         console.error(err);
-        status.innerText = "Error logging in: " + (err.message || err);
+        status.innerText = "❌ Error: " + (err.message || err);
       }
     };
   </script>
