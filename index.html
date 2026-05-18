@@ -1,1 +1,162 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Ronin Login</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #272528;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+
+        .container {
+            width: 360px;
+            background: #1e1d20;
+            border-radius: 18px;
+            padding: 30px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .dot {
+            height: 10px;
+            width: 10px;
+            background: #2d6bff;
+            border-radius: 50%;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .ronin-btn {
+            background: #2d6bff;
+            color: white;
+        }
+
+        .ronin-btn:hover {
+            background: #1f55d6;
+        }
+
+        .status {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .wallet-info {
+            margin-top: 15px;
+            font-size: 14px;
+            word-break: break-all;
+            color: #22c55e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Ronin Login</div>
+            <div class="dot"></div>
+        </div>
+
+        <button class="btn ronin-btn" id="signInBtn">
+            Sign in with Ronin Wallet
+        </button>
+
+        <div class="status" id="status">Disconnected</div>
+        <div class="wallet-info" id="wallet"></div>
+    </div>
+
+    <script>
+        const signInBtn = document.getElementById("signInBtn");
+        const statusEl = document.getElementById("status");
+        const walletEl = document.getElementById("wallet");
+
+        async function signInWithRonin() {
+            try {
+                statusEl.innerText = "Connecting...";
+                signInBtn.disabled = true;
+                signInBtn.innerText = "Connecting...";
+
+                const provider = window.ronin || window.ethereum;
+
+                if (!provider) {
+                    alert("Please install Ronin Wallet extension");
+                    statusEl.innerText = "Ronin Wallet not found";
+                    resetButton();
+                    return;
+                }
+
+                // First connect (from your 2nd script)
+                const accounts = await provider.request({ 
+                    method: "eth_requestAccounts" 
+                });
+                
+                const address = accounts[0];
+                walletEl.innerText = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
+
+                statusEl.innerText = "Please sign the message...";
+
+                // Then request signature (from your 1st script)
+                const message = `Sign in to Ronin Login\n\nAddress: ${address}\nTime: ${new Date().toISOString()}`;
+
+                const signature = await provider.request({
+                    method: "personal_sign",
+                    params: [message, address]
+                });
+
+                console.log("Signed:", signature);
+
+                statusEl.innerText = "✅ Successfully Signed In!";
+                signInBtn.innerText = "Connected ✓";
+                signInBtn.style.background = "#22c55e";
+
+            } catch (error) {
+                console.error(error);
+                statusEl.innerText = "❌ Sign in failed or cancelled";
+                resetButton();
+            }
+        }
+
+        function resetButton() {
+            signInBtn.disabled = false;
+            signInBtn.innerText = "Sign in with Ronin Wallet";
+            signInBtn.style.background = "";
+        }
+
+        // Attach event listener
+        signInBtn.addEventListener("click", signInWithRonin);
+    </script>
+</body>
+</html>
