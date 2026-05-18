@@ -1,77 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Ronin Wallet Connect</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #1f1f24;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-    }
-
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      background: #00ffa3;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    button:hover {
-      background: #00d48a;
-    }
-
-    #wallet {
-      margin-top: 20px;
-      word-break: break-all;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ronin Login</title>
 </head>
-
 <body>
-
-  <h1>Ronin Wallet Login</h1>
-  <button id="connectBtn">Connect Ronin Wallet</button>
-  <p id="wallet">Not connected</p>
+  <button id="login">Login with Ronin</button>
+  <p id="status"></p>
 
   <script>
-    const connectBtn = document.getElementById("connectBtn");
-    const walletText = document.getElementById("wallet");
+    const status = document.getElementById("status");
 
-    async function connectRonin() {
+    // Helper to detect Ronin Wallet
+    function getRoninProvider() {
+      if (window.ronin?.provider) {
+        return window.ronin.provider;
+      }
+      // Fallback for some versions
+      if (window.roninWallet) {
+        return window.roninWallet;
+      }
+      return null;
+    }
+
+    document.getElementById("login").onclick = async () => {
       try {
-        // Check if Ronin Wallet is installed
-        if (!window.ronin || !window.ronin.provider) {
-          alert("Ronin Wallet not found. Please install it.");
+        const provider = getRoninProvider();
+
+        if (!provider) {
+          alert("Ronin Wallet is not installed. Please install it from https://wallet.roninchain.com");
+          window.open("https://wallet.roninchain.com", "_blank");
           return;
         }
 
         // Request accounts
-        const accounts = await window.ronin.provider.request({
+        const accounts = await provider.request({
           method: "eth_requestAccounts"
         });
 
-        const walletAddress = accounts[0];
+        const address = accounts[0];
+        status.innerText = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`;
 
-        walletText.innerText = "Connected: " + walletAddress;
-        console.log("Wallet connected:", walletAddress);
+        // === Your existing backend nonce + sign flow ===
+        const nonceRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "get_nonce",
+            address
+          })
+        });
+
+        const { nonce } = await nonceRes.json();
+
+        const message = `Login to Rofriends with nonce: ${nonce}`;
+
+        // Sign message
+        const signature = await provider.request({
+          method: "personal_sign",
+          params: [message, address]
+        });
+
+        // Verify on backend
+        const verifyRes = await fetch("YOUR_SUPABASE_FUNCTION_URL", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "verify",
+            address,
+            signature,
+            message
+          })
+        });
+
+        const result = await verifyRes.json();
+
+        if (result.success) {
+          status.innerText = `✅ Logged in as ${address.slice(0, 6)}...${address.slice(-4)}`;
+        } else {
+          status.innerText = "❌ Login failed";
+        }
 
       } catch (err) {
         console.error(err);
-        walletText.innerText = "Connection failed";
+        status.innerText = "Error logging in: " + (err.message || err);
       }
-    }
-
-    connectBtn.addEventListener("click", connectRonin);
+    };
   </script>
-
 </body>
 </html>
