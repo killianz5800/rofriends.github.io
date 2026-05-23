@@ -1,68 +1,216 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ROFriends SocialHub</title>
-  <link rel="stylesheet" href="style.css">
+
+  <style>
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    body{
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg,#0f172a,#111827,#1e293b);
+      color:white;
+      min-height:100vh;
+      overflow:hidden;
+    }
+    .background-glow{
+      position:absolute;
+      width:500px;
+      height:500px;
+      background:#00b7ff;
+      filter:blur(120px);
+      opacity:0.15;
+      top:-100px;
+      right:-100px;
+      border-radius:50%;
+    }
+    .container{
+      position:relative;
+      z-index:2;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+      padding:20px;
+    }
+    .card{
+      width:420px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);
+      backdrop-filter:blur(14px);
+      border-radius:24px;
+      padding:40px;
+      text-align:center;
+      box-shadow:0 10px 40px rgba(0,0,0,0.4);
+    }
+    .logo{
+      width:90px;
+      height:90px;
+      margin:auto;
+      margin-bottom:20px;
+      border-radius:20px;
+      background:linear-gradient(135deg,#00c6ff,#0072ff);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      font-size:36px;
+      font-weight:bold;
+      box-shadow:0 0 25px rgba(0,183,255,0.5);
+    }
+    h1{
+      font-size:34px;
+      margin-bottom:10px;
+    }
+    .ronin{ color:#00b7ff; }
+    p{
+      color:#cbd5e1;
+      font-size:15px;
+      margin-bottom:30px;
+      line-height:1.6;
+    }
+    .wallet-btn{
+      width:100%;
+      padding:16px;
+      border:none;
+      border-radius:14px;
+      background:linear-gradient(135deg,#009dff,#005eff);
+      color:white;
+      font-size:17px;
+      font-weight:bold;
+      cursor:pointer;
+      transition:0.3s;
+      box-shadow:0 5px 20px rgba(0,123,255,0.35);
+    }
+    .wallet-btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 10px 30px rgba(0,123,255,0.5);
+    }
+    .wallet-btn:disabled{
+      opacity:0.7;
+      cursor:not-allowed;
+    }
+    .wallet-address{
+      margin-top:20px;
+      font-size:14px;
+      color:#38bdf8;
+      word-break:break-all;
+      padding:12px;
+      background:rgba(0,0,0,0.2);
+      border-radius:12px;
+    }
+    .footer{
+      margin-top:30px;
+      font-size:12px;
+      color:#94a3b8;
+    }
+    .disconnect-btn{
+      margin-top:12px;
+      background:none;
+      border:1px solid rgba(255,255,255,0.2);
+      color:#94a3b8;
+      padding:8px 16px;
+      border-radius:10px;
+      font-size:13px;
+      cursor:pointer;
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">ROFriends</div>
-
-  <input type="text" placeholder="Search friends...">
-
-  <button id="connectBtn">Connect Ronin Wallet</button>
-</header>
+<div class="background-glow"></div>
 
 <div class="container">
+  <div class="card">
+    <div class="logo">R</div>
+    <h1>ROFriends <span class="ronin">SocialHub</span></h1>
+    <p>Connect your Ronin Wallet and enter the next generation<br>social platform for the Ronin Network community.</p>
 
-  <aside class="sidebar">
-    <ul>
-      <li><a href="index.html">Home</a></li>
-      <li><a href="profile.html">Profile</a></li>
-      <li><a href="messages.html">Messages</a></li>
-      <li><a href="feed.html">Feed</a></li>
-    </ul>
-  </aside>
+    <button class="wallet-btn" id="connectBtn">Sign in using Ronin Wallet</button>
 
-  <main>
+    <div class="wallet-address" id="walletAddress" style="display:none;"></div>
 
-    <div class="create-post">
-      <textarea placeholder="What's happening today?"></textarea>
-      <button>Post</button>
-    </div>
+    <button class="disconnect-btn" id="disconnectBtn" style="display:none;">Disconnect Wallet</button>
 
-    <div class="post-card">
-      <div class="post-header">
-        <img src="assets/avatar.png">
-        <div>
-          <h3>Troy</h3>
-          <small>2 mins ago</small>
-        </div>
-      </div>
-
-      <p>Welcome to ROFriends SocialHub 🚀</p>
-
-      <div class="actions">
-        <button>Like</button>
-        <button>Comment</button>
-        <button>Share</button>
-      </div>
-    </div>
-
-  </main>
-
-  <aside class="rightbar">
-    <h3>Trending</h3>
-    <p>#Ronin</p>
-    <p>#AxieInfinity</p>
-    <p>#ROFriends</p>
-  </aside>
-
+    <div class="footer">Powered by Ronin Network</div>
+  </div>
 </div>
 
-<script src="app.js"></script>
+<script>
+const RONIN_CHAIN_ID = "0x7e4";
+
+async function connectRoninWallet() {
+  const btn = document.getElementById("connectBtn");
+  const walletAddressEl = document.getElementById("walletAddress");
+  const disconnectBtn = document.getElementById("disconnectBtn");
+
+  if (typeof window.ronin === "undefined" || !window.ronin.provider) {
+    alert("Ronin Wallet not detected. Please install the Ronin Wallet extension.");
+    window.open("https://wallet.roninchain.com/", "_blank");
+    return;
+  }
+
+  try {
+    btn.innerHTML = "Connecting...";
+    btn.disabled = true;
+
+    const provider = window.ronin.provider;
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    const wallet = accounts[0];
+
+    // Chain Validation
+    let chainId = await provider.request({ method: 'eth_chainId' });
+    if (chainId !== RONIN_CHAIN_ID) {
+      if (confirm("You are not on Ronin Network.\nSwitch now?")) {
+        try {
+          await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: RONIN_CHAIN_ID }] });
+        } catch (e) {
+          alert("Failed to switch network. Please switch manually in your wallet.");
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+
+    const truncated = wallet.substring(0, 6) + "..." + wallet.substring(wallet.length - 4);
+    localStorage.setItem("roninWallet", wallet);
+
+    walletAddressEl.innerHTML = `✅ Connected Successfully!<br><strong>${truncated}</strong><br><small style="color:#4ade80;">Ronin Mainnet</small>`;
+    walletAddressEl.style.color = "#4ade80";
+    walletAddressEl.style.display = "block";
+    disconnectBtn.style.display = "inline-block";
+
+  } catch (error) {
+    if (error.code === 4001) alert("Connection rejected.");
+    else alert("Failed to connect.");
+  } finally {
+    btn.innerHTML = "Sign in using Ronin Wallet";
+    btn.disabled = false;
+  }
+}
+
+function disconnectWallet() {
+  localStorage.removeItem("roninWallet");
+  document.getElementById("walletAddress").style.display = "none";
+  document.getElementById("disconnectBtn").style.display = "none";
+}
+
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("roninWallet");
+  if (saved) {
+    const el = document.getElementById("walletAddress");
+    const disc = document.getElementById("disconnectBtn");
+    const trunc = saved.substring(0,6) + "..." + saved.substring(saved.length-4);
+    el.innerHTML = `✅ Connected!<br><strong>${trunc}</strong><br><small style="color:#4ade80;">Ronin Mainnet</small>`;
+    el.style.color = "#4ade80";
+    el.style.display = "block";
+    disc.style.display = "inline-block";
+  }
+});
+
+document.getElementById("connectBtn").addEventListener("click", connectRoninWallet);
+document.getElementById("disconnectBtn").addEventListener("click", disconnectWallet);
+</script>
 </body>
 </html>
