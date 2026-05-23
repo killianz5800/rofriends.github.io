@@ -1,1 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROFriends SocialHub</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+<header>
+  <div class="logo">ROFriends</div>
+
+  <input type="text" placeholder="Search friends...">
+
+  <button id="connectBtn">Connect Ronin Wallet</button>
+</header>
+
+<div class="container">
+
+  <aside class="sidebar">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="profile.html">Profile</a></li>
+      <li><a href="messages.html">Messages</a></li>
+      <li><a href="feed.html">Feed</a></li>
+    </ul>
+  </aside>
+
+  <main>
+
+    <div class="create-post">
+      <textarea placeholder="What's happening today?"></textarea>
+      <button>Post</button>
+    </div>
+
+    <div class="post-card">
+      <div class="post-header">
+        <img src="assets/avatar.png">
+        <div>
+          <h3>Troy</h3>
+          <small>2 mins ago</small>
+        </div>
+      </div>
+
+      <p>Welcome to ROFriends SocialHub 🚀</p>
+
+      <div class="actions">
+        <button>Like</button>
+        <button>Comment</button>
+        <button>Share</button>
+      </div>
+    </div>
+
+  </main>
+
+  <aside class="rightbar">
+    <h3>Trending</h3>
+    <p>#Ronin</p>
+    <p>#AxieInfinity</p>
+    <p>#ROFriends</p>
+  </aside>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
