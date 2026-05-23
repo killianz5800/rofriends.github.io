@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login with Ronin Wallet</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 80px 20px;
+      background: #0f0f1a;
+      color: white;
+    }
+    h1 {
+      margin-bottom: 40px;
+      color: #00d4ff;
+    }
+    button {
+      padding: 18px 40px;
+      font-size: 20px;
+      background: linear-gradient(45deg, #00bfff, #0099cc);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 20px;
+    }
+    button:hover {
+      background: linear-gradient(45deg, #0099cc, #0077aa);
+      transform: scale(1.05);
+    }
+    #status {
+      margin-top: 30px;
+      font-size: 18px;
+      min-height: 50px;
+    }
+    .success { color: #00ff88; }
+  </style>
+</head>
+<body>
+
+  <h1>Connect Ronin Wallet</h1>
+  
+  <button id="roninBtn">🔗 Login with Ronin Wallet</button>
+  
+  <div id="status"></div>
+
+  <script>
+    const btn = document.getElementById('roninBtn');
+    const status = document.getElementById('status');
+
+    async function connectWithRonin() {
+      status.textContent = "Connecting to Ronin Wallet...";
+
+      if (typeof window.ronin === 'undefined' || !window.ronin.provider) {
+        status.innerHTML = `
+          ❌ Ronin Wallet not found.<br><br>
+          <a href="https://wallet.roninchain.com/" target="_blank" style="color:#00d4ff;">
+            Download Ronin Wallet
+          </a>
+        `;
+        return;
+      }
+
+      try {
+        const provider = window.ronin.provider;
+        
+        const accounts = await provider.request({
+          method: 'eth_requestAccounts'
+        });
+
+        const address = accounts[0];
+
+        status.innerHTML = `
+          <span class="success">✅ Successfully Connected!</span><br><br>
+          <strong>Wallet Address:</strong><br>
+          ${address}
+        `;
+
+        console.log("Ronin Wallet Connected:", address);
+
+        // Optional: You can redirect after successful connection
+        // setTimeout(() => { window.location.href = "index.html"; }, 2000);
+
+      } catch (error) {
+        console.error(error);
+        status.textContent = "❌ Connection cancelled or failed.";
+      }
+    }
+
+    btn.addEventListener('click', connectWithRonin);
+  </script>
+
+</body>
+</html>
