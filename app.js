@@ -1,4 +1,5 @@
-// Firebase Imports
+// ====================== RONIN WALLET CONNECT ======================
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
 import {
   getFirestore,
@@ -14,31 +15,28 @@ const firebaseConfig = {
   projectId: "rofriends-ab0b8",
   storageBucket: "rofriends-ab0b8.firebasestorage.app",
   messagingSenderId: "309137703504",
-  appId: "1:309137703504:web:ee535debe2c015630ec755",
-  measurementId: "G-XQVQGYBL0X"
+  appId: "1:309137703504:web:ee535debe2c015630ec755"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Constants
-const RONIN_CHAIN_ID = "0x7e4";
+const RONIN_CHAIN_ID = "0x7e4"; // Ronin Mainnet
 
-// Helper function
+// Helper: Shorten wallet address
 function truncateAddress(address) {
-  if (!address) return "";
-  return address.substring(0, 6) + "..." + address.substring(address.length - 4);
+  return address.slice(0, 6) + "..." + address.slice(-4);
 }
 
-// Connect Wallet
+// Main Connect Function
 async function connectRoninWallet() {
   const btn = document.getElementById("connectBtn");
-  const walletAddressEl = document.getElementById("walletAddress");
+  const walletEl = document.getElementById("walletAddress");
   const disconnectBtn = document.getElementById("disconnectBtn");
 
-  if (typeof window.ronin === "undefined" || !window.ronin.provider) {
-    alert("Ronin Wallet not detected. Please install the Ronin Wallet extension.");
+  // Check if Ronin Wallet is installed
+  if (!window.ronin?.provider) {
+    alert("Ronin Wallet not detected!\nPlease install the Ronin Wallet extension.");
     window.open("https://wallet.roninchain.com/", "_blank");
     return;
   }
@@ -49,51 +47,35 @@ async function connectRoninWallet() {
 
     const provider = window.ronin.provider;
 
-    // Request accounts
-    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    // Request wallet connection
+    const accounts = await provider.request({
+      method: "eth_requestAccounts"
+    });
+
     const wallet = accounts[0];
 
-    if (!wallet) throw new Error("No account returned");
-
-    // Check and switch network if needed
+    // Check current network
     let chainId = await provider.request({ method: "eth_chainId" });
 
     if (chainId.toLowerCase() !== RONIN_CHAIN_ID.toLowerCase()) {
-      const switchConfirmed = confirm(
-        "You are not on the Ronin Network.\n\nWould you like to switch now?"
-      );
+      const switchOk = confirm("You are not on Ronin Mainnet.\n\nSwitch now?");
+      if (!switchOk) return;
 
-      if (!switchConfirmed) {
-        alert("Please switch to Ronin Network to continue.");
-        return;
-      }
-
-      try {
-        await provider.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: RONIN_CHAIN_ID }]
-        });
-      } catch (switchError) {
-        if (switchError.code === 4902) {
-          alert("Ronin Network is not added to your wallet. Please add it manually.");
-        } else {
-          alert("Failed to switch network.");
-        }
-        return;
-      }
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: RONIN_CHAIN_ID }]
+      });
     }
 
     // Save to Firestore
     await setDoc(doc(db, "users", wallet.toLowerCase()), {
       wallet: wallet,
       network: "Ronin Mainnet",
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp()
-    }, { merge: true }); // Use merge to avoid overwriting existing data
+      lastLogin: serverTimestamp(),
+      createdAt: serverTimestamp()
+    }, { merge: true });
 
-    console.log("✅ User saved to Firestore");
-
-    // Save to localStorage
+    // Save locally
     localStorage.setItem("roninWallet", wallet);
 
     // Update UI
@@ -101,17 +83,64 @@ async function connectRoninWallet() {
 
     disconnectBtn.style.display = "inline-block";
 
+    console.log("✅ Successfully connected:", wallet);
+
   } catch (error) {
-    console.error("Connection error:", error);
+    console.error(error);
 
     if (error.code === 4001) {
       alert("Connection rejected by user.");
-    } else if (error.code === -32603) {
-      alert("Internal JSON-RPC error. Please try again.");
+    } else if (error.code === 4902) {
+      alert("Ronin Network not added. Please add it manually in Ronin Wallet.");
     } else {
-      alert("Failed to connect to Ronin Wallet.");
+      alert("Failed to connect wallet. Please try again.");
     }
   } finally {
     btn.innerHTML = "Sign in using Ronin Wallet";
     btn.disabled = false;
   }
+}
+
+// Update UI
+function updateWalletUI(wallet) {
+  const walletEl = document.getElementById("walletAddress");
+  const short = truncateAddress(wallet);
+
+  walletEl.innerHTML = `
+    ✅ Connected Successfully!<br>
+    <strong>${short}</strong><br>
+    <small style="color:#4ade80;">Ronin Mainnet</small>
+  `;
+  walletEl.style.display = "block";
+  walletEl.style.color = "#4ade80";
+}
+
+// Disconnect
+function disconnectWallet() {
+  localStorage.removeItem("roninWallet");
+  document.getElementById("walletAddress").style.display = "none";
+  document.getElementById("disconnectBtn").style.display = "none";
+  alert("Wallet disconnected.");
+}
+
+// Auto-connect on page load
+window.addEventListener("load", async () => {
+  const savedWallet = localStorage.getItem("roninWallet");
+  if (!savedWallet) return;
+
+  try {
+    if (window.ronin?.provider) {
+      const accounts = await window.ronin.provider.request({ method: "eth_accounts" });
+      if (accounts[0]?.toLowerCase() === savedWallet.toLowerCase()) {
+        updateWalletUI(savedWallet);
+        document.getElementById("disconnectBtn").style.display = "inline-block";
+      }
+    }
+  } catch (err) {
+    console.warn("Auto connect failed", err);
+  }
+});
+
+// Event Listeners
+document.getElementById("connectBtn").addEventListener("click", connectRoninWallet);
+document.getElementById("disconnectBtn").addEventListener("click", disconnectWallet);
