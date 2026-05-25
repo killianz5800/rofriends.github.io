@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ronin Login + Firebase</title>
+</head>
+<body>
+
+<button id="saveBtn">Save User</button>
+
+<script type="module">
+
+// IMPORT FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+
+import {
+  getFirestore,
+  doc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+
+// YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBS_KFq-QLD89xyq1kTE3FJ62E8HFP09BI",
+  authDomain: "rofriends-ab0b8.firebaseapp.com",
+  projectId: "rofriends-ab0b8",
+  storageBucket: "rofriends-ab0b8.firebasestorage.app",
+  messagingSenderId: "309137703504",
+  appId: "1:309137703504:web:ee535debe2c015630ec755",
+  measurementId: "G-XQVQGYBL0X"
+};
+
+
+// INITIALIZE FIREBASE
+const app = initializeApp(firebaseConfig);
+
+// INITIALIZE FIRESTORE
+const db = getFirestore(app);
+
+
+// SAMPLE WALLET
+const wallet = "ronin:123456789abc";
+
+
+// BUTTON CLICK
+document.getElementById("saveBtn").addEventListener("click", async () => {
+
+  try {
+
+    // SAVE USER TO FIRESTORE
+    await setDoc(doc(db, "users", wallet), {
+      wallet: wallet,
+      createdAt: new Date()
+    });
+
+    alert("User saved successfully!");
+
+    console.log("Saved!");
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Error saving user");
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>
